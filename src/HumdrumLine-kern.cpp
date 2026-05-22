@@ -26,20 +26,21 @@ namespace hum {
 // HumdrumLine::getTriadicQuality --
 //
 
+
 string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		string& quality, string& root, string& inversion,
 		map<string, bool>& options) {
 
-	bool pitchesQ = options["pitches"]; // show list of pitches
-	bool classQ   = options["class"]; // show list of unique pitch classes
-	bool restQ    = options["rest"];  // include rest
-	bool lowQ     = options["low"];   // sort pitches from low to high
+	bool pitchesQ = options["pitches"];
+	bool classQ   = options["class"];
+	bool restQ    = options["rest"];
+	bool lowQ     = options["low"];
 
 	quality.clear();
 	root.clear();
 	inversion.clear();
 
-	// Return non-data line types:
+	// Non-data lines.
 	if (infile[index].isExclusiveInterpretation()) {
 		return "**cdata";
 	} else if (infile[index].isManipulator()) {
@@ -55,35 +56,33 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		return *(infile[index].token(0));
 	} else if (infile[index].isCommentLocal()) {
 		return "!";
-	} else  if (!infile[index].isData()) {
+	} else if (!infile[index].isData()) {
 		return "!!";
 	}
 
 	vector<int> notes;
-	//Collect note attacks/sustains/rests on line
-	// 0 = rests
-	// <0 = sustain
-	// Sorting ignores sign
-	if (lowQ) {
-		infile[index].getMidiPitchesSortHL(notes); // reversed for some reason
-	} else {
-		infile[index].getMidiPitchesSortLH(notes);
-	}
 
-	if (pitchesQ) {
-		string output = "[";
-		for (int i=0; i<(int)notes.size(); i++) {
-			if (restQ && notes[i] == 0) {
+	// Collect notes from all sounding tokens, including resolved nulls.
+	for (int i=0; i<infile[index].getFieldCount(); i++) {
+		HTp tok = this->token(i);
+		if (!tok->isKern()) {
+			continue;
+		}
+		if (!tok->isData()) {
+			continue;
+		}
+		if (tok->isNull()) {
+			tok = tok->resolveNull();
+			if (!tok || tok->isNull()) {
 				continue;
 			}
-			output += to_string(notes[i]) +  " ";
 		}
-		output.back() = ']';
-		quality = output;
-cerr << "Quality = " << output << endl;
-		root = "";
-		inversion = "";
-		return output;
+		vector<int> subtoks;
+		tok->getMidiPitches(subtoks);
+
+		for (int j=0; j<(int)subtoks.size(); j++) {
+			notes.push_back(subtoks[j]);
+		}
 	}
 
 	if (notes.empty()) {
@@ -95,71 +94,137 @@ cerr << "Quality = " << output << endl;
 		}
 	}
 
-	// Get leftmost sounding pitch class (NOT necessarily lowest pitch).
+	// Sort pitches if requested.
+	if (lowQ) {
+		sort(notes.begin(), notes.end(),
+			[](const int& a, const int& b) {
+				return abs(a) > abs(b);
+			}
+		);
+	} else {
+		sort(notes.begin(), notes.end(),
+			[](const int& a, const int& b) {
+				return abs(a) < abs(b);
+			}
+		);
+	}
+
+	if (pitchesQ) {
+		string output = "[";
+
+		for (int i=0; i<(int)notes.size(); i++) {
+
+			int pitch = notes[i];
+
+			if (pitch == 0 && restQ) {
+				continue;
+			}
+
+			output += to_string(pitch);
+			output += " ";
+		}
+
+		if (output.size() == 1) {
+			output += "]";
+		} else {
+			output.back() = ']';
+		}
+
+		quality = output;
+		return output;
+	}
+
+	// Bass pitch class = leftmost sounding note.
 	int basspc = -1;
 
 	for (int i=0; i<infile[index].getFieldCount(); i++) {
+
 		HTp tok = infile[index].token(i);
+
 		if (tok->isNull()) {
-			// deal with null tokens
 			tok = tok->resolveNull();
 			if (!tok || tok->isNull()) {
 				continue;
 			}
-			continue;
 		}
+
 		if (!tok->isData()) {
 			continue;
-		} 
+		}
+
 		vector<int> subtoks;
 		tok->getMidiPitches(subtoks);
+
 		for (int j=0; j<(int)subtoks.size(); j++) {
-			notes.push_back(subtoks[i]);
+
+			int pitch = subtoks[j];
+
+			if (pitch == 0) {
+				continue;
+			}
+
+			if (pitch < 0) {
+				pitch = -pitch;
+			}
+
+			basspc = pitch % 12;
+			break;
+		}
+
+		if (basspc >= 0) {
+			break;
 		}
 	}
 
-	// Extract unique pitch classes.
-	vector<bool> pcs(12);
+	vector<bool> pcs(12, false);
+
 	for (int i=0; i<(int)notes.size(); i++) {
-		int pc = notes[i];
-		if (pc == 0) {
-			// ignore rests
+
+		int pitch = notes[i];
+
+		if (pitch == 0) {
 			continue;
 		}
-		if (pc < 0) {
-			// ignore sustains information
-			pc = -pc;
+
+		if (pitch < 0) {
+			pitch = -pitch;
 		}
-		pc = pc % 12;
-		pcs.at(pc) = true;
+
+		pcs[pitch % 12] = true;
 	}
 
 	vector<int> pcs_new;
-	for (int i=0; i<(int)pcs.size(); i++) {
+
+	for (int i=0; i<12; i++) {
 		if (pcs[i]) {
 			pcs_new.push_back(i);
 		}
 	}
 
 	if (classQ) {
+
 		string output = "{";
+
 		for (int i=0; i<(int)pcs_new.size(); i++) {
-			output += to_string(pcs_new[i]) + " ";
+			output += to_string(pcs_new[i]);
+			output += " ";
 		}
+
 		if (output.size() == 1) {
 			output += "}";
 		} else {
 			output.back() = '}';
 		}
+
 		return output;
 	}
 
 	static vector<string> pcnames = {
-		"C", "C#", "D", "E-", "E", "F",
-		"F#", "G", "A-", "A", "B-", "B"
+		"C", "C#", "D", "E♭", "E", "F",
+		"F#", "G", "A♭", "A", "B♭", "B"
 	};
 
-	if (pcs_new.size() == 0) {
+	if (pcs_new.empty()) {
 		if (restQ) {
 			quality = "R";
 			return "";
@@ -168,36 +233,70 @@ cerr << "Quality = " << output << endl;
 		}
 	}
 
+	// Unison.
 	if (pcs_new.size() == 1) {
 		quality = "U";
 		root = pcnames[pcs_new[0]];
+		root += "₁";
 		return "";
 	}
 
+	// Dyads.
 	if (pcs_new.size() == 2) {
-		int interval = (pcs_new[1] - pcs_new[0] + 12) % 12;
+
+		int pc1 = pcs_new[0];
+		int pc2 = pcs_new[1];
+
+		int interval = (pc2 - pc1 + 12) % 12;
 
 		if (interval == 7) {
-			quality = "-5";   // missing third
+			quality = "-5";
+			root = pcnames[pc1];
+			root += "₅";
+
+		} else if (interval == 5) {
+			quality = "-5";
+			root = pcnames[pc2];
+			root += "₅";
+
 		} else if (interval == 3) {
-			quality = "-m";   // missing 5th (major)
+			quality = "-m";
+			root = pcnames[pc1];
+			root[0] = tolower(root[0]);
+			root += "₃";
+
+		} else if (interval == 9) {
+			quality = "-m";
+			root = pcnames[pc2];
+			root[0] = tolower(root[0]);
+			root += "₃";
+
 		} else if (interval == 4) {
-			quality = "-M";   // missing 5th (minor)
+			quality = "-M";
+			root = pcnames[pc1];
+			root += "₃";
+
+		} else if (interval == 8) {
+			quality = "-M";
+			root = pcnames[pc2];
+			root += "₃";
+
 		} else {
-			quality = "?";    // non-triadic dyad:
+			quality = "?";
+			root.clear();
+			inversion.clear();
 		}
 
-		root = pcnames[pcs_new[0]];
 		return "";
 	}
 
+	// More than triad.
 	if (pcs_new.size() > 3) {
 		quality = "+";
 		return "";
 	}
 
-	// Try all roots.
-
+	// Try all pitch classes as root.
 	for (int i=0; i<3; i++) {
 
 		int r = pcs_new[i];
@@ -210,7 +309,6 @@ cerr << "Quality = " << output << endl;
 
 		for (int j=0; j<3; j++) {
 			int interval = (pcs_new[j] - r + 12) % 12;
-
 			if (interval == 3) {
 				has3 = true;
 			} else if (interval == 4) {
@@ -226,70 +324,80 @@ cerr << "Quality = " << output << endl;
 
 		int bassint = (basspc - r + 12) % 12;
 
-		// Major
-
+		// Major triad.
 		if (has4 && has7) {
 			quality = "M";
 			root = pcnames[r];
-
 			if (bassint == 4) {
-				inversion = "b";
+				inversion = "6";
+				root += "₆";
 			} else if (bassint == 7) {
-				inversion = "c";
+				inversion = "4";
+				root += "₄";
 			}
-
 			return "";
 		}
 
-		// Minor
-
+		// Minor triad.
 		if (has3 && has7) {
 			quality = "m";
 			root = pcnames[r];
-
+			if (!root.empty()) {
+				root[0] = tolower(root[0]);
+			}
 			if (bassint == 3) {
-				inversion = "b";
+				inversion = "6";
+				root += "₆";
 			} else if (bassint == 7) {
-				inversion = "c";
+				inversion = "4";
+				root += "₄";
 			}
 
 			return "";
 		}
 
-		// Diminished
-
+		// Diminished triad.
 		if (has3 && has6) {
 			quality = "d";
 			root = pcnames[r];
-
-			if (bassint == 3) {
-				inversion = "b";
-			} else if (bassint == 6) {
-				inversion = "c";
+			root += "°";
+			if (!root.empty()) {
+				root[0] = tolower(root[0]);
 			}
-
+			if (bassint == 3) {
+				inversion = "6";
+				root += "₆";
+			} else if (bassint == 4) {
+				inversion = "4";
+				root += "₄";
+			}
 			return "";
 		}
 
-		// Augmented
-
+		// Augmented triad.
 		if (has4 && has8) {
 			quality = "A";
 			root = pcnames[r];
-
+			root += "⁺";
 			if (bassint == 4) {
-				inversion = "b";
+				inversion = "6";
+				root += "₆";
 			} else if (bassint == 8) {
-				inversion = "c";
+				inversion = "4";
+				root += "₄";
 			}
-
 			return "";
 		}
 	}
 
-	quality = "??";
+	// Unknown trichord.
+	quality = "?";
+	root.clear();
+	inversion.clear();
+
 	return "";
 }
+
 
 //////////////////////////////
 //

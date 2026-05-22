@@ -36,6 +36,7 @@ Tool_triad::Tool_triad(void) {
 	define("q|quality=b",      "Display quality only");
 	define("U|no-unison=b",    "No U quality");
 	define("l|low=b",          "Sort pitches from low to high");
+	define("color=s:salmon",   "Set analysis color");
 }
 
 
@@ -101,6 +102,8 @@ void Tool_triad::initialize(void) {
 	m_qualityQ  = getBoolean("quality");
 	m_unisonQ   = !getBoolean("no-unison");
 	m_lowQ      = !getBoolean("low");
+	m_color     = getString("color");
+cerr << "COLOR " << m_color << endl;
 }
 
 
@@ -114,6 +117,7 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 	string quality;
 	string root;
 	string inversion;
+	bool hasColor = false;
 
 	for (int i=0; i<infile.getLineCount(); i++) {
 
@@ -135,6 +139,7 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 
 		string token = infile[i].getTriadicQuality(
 			infile, i, quality, root, inversion, options);
+		inversion = "";  // embedded in root for now.
 		if (!m_unisonQ && (quality == "U")) {
 			quality = "";
 		}
@@ -144,6 +149,10 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 		if (m_qualityQ) {
 			root = "";
 			inversion = "";
+		}
+		if (!hasColor && token == "*") {
+			token += "color:" + m_color;
+			hasColor = true;
 		}
 
 		// Construct analysis token for data lines.

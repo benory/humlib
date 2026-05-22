@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Sat Aug  8 12:24:49 PDT 2015
-// Last Modified: Sun May 17 03:43:45 PDT 2026
+// Last Modified: Sat May 23 04:24:18 JST 2026
 // Filename:      min/humlib.h
 // URL:           https://github.com/craigsapp/humlib/blob/master/min/humlib.h
 // Syntax:        C++11
@@ -6225,6 +6225,7 @@ class Tool_autocadence : public HumTool {
 		void        fillInMajorMinor           (HumdrumFile& infile);
 		bool        getPhrygian                (HumdrumFile& infile, int index);
 		std::string getIntervalName            (const std::string& b40);
+		std::string getTriadData               (HumdrumFile& infile, int line);
 
 	private:
 
@@ -6309,7 +6310,8 @@ class Tool_autocadence : public HumTool {
 		bool m_printSequenceInfoQ       = false; // -s: print list of interval sequences
 		bool m_countQ                   = false; // --count: print number of cadences found
 		bool m_colorQ                   = false; // -c: color matched cadence formula
-		std::string m_color      = "dodgerblue"; // --color "string" to set matched notes to a specific color
+		std::string m_triadColor        = "salmon"; // -C: color triad analysis
+		std::string m_color             = "dodgerblue"; // --color "string" to set matched notes to a specific color
 		bool m_showFormulaIndexQ        = false; // -f: show formulation index after CVF label
 		bool m_evenNoteSpacingQ         = false; // -e: compress notation (verovio option evenNoteSpacing)
 		bool m_regexQ                   = false; // -r: show table of matched regular expressions
@@ -6326,6 +6328,7 @@ class Tool_autocadence : public HumTool {
 		bool m_qualityQ                 = false; // -q
 		bool m_triadQ                   = false; // -q|--root
 
+		int         m_cadenceCount = 0;
 		std::string m_marker = "@";
 		std::string m_suspensionMarker = "N";
 		std::string m_suspensionColor  = "crimson";
@@ -6333,6 +6336,8 @@ class Tool_autocadence : public HumTool {
 		std::string m_lastMelColor     = "limegreen";
 		std::vector<std::string> m_quality;
 		std::vector<std::string> m_root;
+		bool m_foundEmpytTriad = false;
+		bool m_hasTriadColor = false;
 };
 
 
@@ -12302,6 +12307,7 @@ class Tool_triad : public HumTool {
 		bool m_rootQ    = false; // -r
 		bool m_summaryQ = false; // not implemented
 		bool m_unisonQ  = false; // -U
+		std::string m_color = "salmon"; // --color
 
 };
 

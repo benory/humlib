@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Sat Aug  8 12:24:49 PDT 2015
-// Last Modified: Sun May 17 03:43:45 PDT 2026
+// Last Modified: Sat May 23 04:24:18 JST 2026
 // Filename:      min/humlib.cpp
 // URL:           https://github.com/craigsapp/humlib/blob/master/min/humlib.cpp
 // Syntax:        C++11
@@ -32469,20 +32469,21 @@ string HumdrumFileStructure::getPartName(HTp sstart) {
 // HumdrumLine::getTriadicQuality --
 //
 
+
 string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		string& quality, string& root, string& inversion,
 		map<string, bool>& options) {
 
-	bool pitchesQ = options["pitches"]; // show list of pitches
-	bool classQ   = options["class"]; // show list of unique pitch classes
-	bool restQ    = options["rest"];  // include rest
-	bool lowQ     = options["low"];   // sort pitches from low to high
+	bool pitchesQ = options["pitches"];
+	bool classQ   = options["class"];
+	bool restQ    = options["rest"];
+	bool lowQ     = options["low"];
 
 	quality.clear();
 	root.clear();
 	inversion.clear();
 
-	// Return non-data line types:
+	// Non-data lines.
 	if (infile[index].isExclusiveInterpretation()) {
 		return "**cdata";
 	} else if (infile[index].isManipulator()) {
@@ -32498,35 +32499,33 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		return *(infile[index].token(0));
 	} else if (infile[index].isCommentLocal()) {
 		return "!";
-	} else  if (!infile[index].isData()) {
+	} else if (!infile[index].isData()) {
 		return "!!";
 	}
 
 	vector<int> notes;
-	//Collect note attacks/sustains/rests on line
-	// 0 = rests
-	// <0 = sustain
-	// Sorting ignores sign
-	if (lowQ) {
-		infile[index].getMidiPitchesSortHL(notes); // reversed for some reason
-	} else {
-		infile[index].getMidiPitchesSortLH(notes);
-	}
 
-	if (pitchesQ) {
-		string output = "[";
-		for (int i=0; i<(int)notes.size(); i++) {
-			if (restQ && notes[i] == 0) {
+	// Collect notes from all sounding tokens, including resolved nulls.
+	for (int i=0; i<infile[index].getFieldCount(); i++) {
+		HTp tok = this->token(i);
+		if (!tok->isKern()) {
+			continue;
+		}
+		if (!tok->isData()) {
+			continue;
+		}
+		if (tok->isNull()) {
+			tok = tok->resolveNull();
+			if (!tok || tok->isNull()) {
 				continue;
 			}
-			output += to_string(notes[i]) +  " ";
 		}
-		output.back() = ']';
-		quality = output;
-cerr << "Quality = " << output << endl;
-		root = "";
-		inversion = "";
-		return output;
+		vector<int> subtoks;
+		tok->getMidiPitches(subtoks);
+
+		for (int j=0; j<(int)subtoks.size(); j++) {
+			notes.push_back(subtoks[j]);
+		}
 	}
 
 	if (notes.empty()) {
@@ -32538,71 +32537,137 @@ cerr << "Quality = " << output << endl;
 		}
 	}
 
-	// Get leftmost sounding pitch class (NOT necessarily lowest pitch).
+	// Sort pitches if requested.
+	if (lowQ) {
+		sort(notes.begin(), notes.end(),
+			[](const int& a, const int& b) {
+				return abs(a) > abs(b);
+			}
+		);
+	} else {
+		sort(notes.begin(), notes.end(),
+			[](const int& a, const int& b) {
+				return abs(a) < abs(b);
+			}
+		);
+	}
+
+	if (pitchesQ) {
+		string output = "[";
+
+		for (int i=0; i<(int)notes.size(); i++) {
+
+			int pitch = notes[i];
+
+			if (pitch == 0 && restQ) {
+				continue;
+			}
+
+			output += to_string(pitch);
+			output += " ";
+		}
+
+		if (output.size() == 1) {
+			output += "]";
+		} else {
+			output.back() = ']';
+		}
+
+		quality = output;
+		return output;
+	}
+
+	// Bass pitch class = leftmost sounding note.
 	int basspc = -1;
 
 	for (int i=0; i<infile[index].getFieldCount(); i++) {
+
 		HTp tok = infile[index].token(i);
+
 		if (tok->isNull()) {
-			// deal with null tokens
 			tok = tok->resolveNull();
 			if (!tok || tok->isNull()) {
 				continue;
 			}
-			continue;
 		}
+
 		if (!tok->isData()) {
 			continue;
-		} 
+		}
+
 		vector<int> subtoks;
 		tok->getMidiPitches(subtoks);
+
 		for (int j=0; j<(int)subtoks.size(); j++) {
-			notes.push_back(subtoks[i]);
+
+			int pitch = subtoks[j];
+
+			if (pitch == 0) {
+				continue;
+			}
+
+			if (pitch < 0) {
+				pitch = -pitch;
+			}
+
+			basspc = pitch % 12;
+			break;
+		}
+
+		if (basspc >= 0) {
+			break;
 		}
 	}
 
-	// Extract unique pitch classes.
-	vector<bool> pcs(12);
+	vector<bool> pcs(12, false);
+
 	for (int i=0; i<(int)notes.size(); i++) {
-		int pc = notes[i];
-		if (pc == 0) {
-			// ignore rests
+
+		int pitch = notes[i];
+
+		if (pitch == 0) {
 			continue;
 		}
-		if (pc < 0) {
-			// ignore sustains information
-			pc = -pc;
+
+		if (pitch < 0) {
+			pitch = -pitch;
 		}
-		pc = pc % 12;
-		pcs.at(pc) = true;
+
+		pcs[pitch % 12] = true;
 	}
 
 	vector<int> pcs_new;
-	for (int i=0; i<(int)pcs.size(); i++) {
+
+	for (int i=0; i<12; i++) {
 		if (pcs[i]) {
 			pcs_new.push_back(i);
 		}
 	}
 
 	if (classQ) {
+
 		string output = "{";
+
 		for (int i=0; i<(int)pcs_new.size(); i++) {
-			output += to_string(pcs_new[i]) + " ";
+			output += to_string(pcs_new[i]);
+			output += " ";
 		}
+
 		if (output.size() == 1) {
 			output += "}";
 		} else {
 			output.back() = '}';
 		}
+
 		return output;
 	}
 
 	static vector<string> pcnames = {
-		"C", "C#", "D", "E-", "E", "F",
-		"F#", "G", "A-", "A", "B-", "B"
+		"C", "C#", "D", "E♭", "E", "F",
+		"F#", "G", "A♭", "A", "B♭", "B"
 	};
 
-	if (pcs_new.size() == 0) {
+	if (pcs_new.empty()) {
 		if (restQ) {
 			quality = "R";
 			return "";
@@ -32611,36 +32676,70 @@ cerr << "Quality = " << output << endl;
 		}
 	}
 
+	// Unison.
 	if (pcs_new.size() == 1) {
 		quality = "U";
 		root = pcnames[pcs_new[0]];
+		root += "₁";
 		return "";
 	}
 
+	// Dyads.
 	if (pcs_new.size() == 2) {
-		int interval = (pcs_new[1] - pcs_new[0] + 12) % 12;
+
+		int pc1 = pcs_new[0];
+		int pc2 = pcs_new[1];
+
+		int interval = (pc2 - pc1 + 12) % 12;
 
 		if (interval == 7) {
-			quality = "-5";   // missing third
+			quality = "-5";
+			root = pcnames[pc1];
+			root += "₅";
+
+		} else if (interval == 5) {
+			quality = "-5";
+			root = pcnames[pc2];
+			root += "₅";
+
 		} else if (interval == 3) {
-			quality = "-m";   // missing 5th (major)
+			quality = "-m";
+			root = pcnames[pc1];
+			root[0] = tolower(root[0]);
+			root += "₃";
+
+		} else if (interval == 9) {
+			quality = "-m";
+			root = pcnames[pc2];
+			root[0] = tolower(root[0]);
+			root += "₃";
+
 		} else if (interval == 4) {
-			quality = "-M";   // missing 5th (minor)
+			quality = "-M";
+			root = pcnames[pc1];
+			root += "₃";
+
+		} else if (interval == 8) {
+			quality = "-M";
+			root = pcnames[pc2];
+			root += "₃";
+
 		} else {
-			quality = "?";    // non-triadic dyad:
+			quality = "?";
+			root.clear();
+			inversion.clear();
 		}
 
-		root = pcnames[pcs_new[0]];
 		return "";
 	}
 
+	// More than triad.
 	if (pcs_new.size() > 3) {
 		quality = "+";
 		return "";
 	}
 
-	// Try all roots.
-
+	// Try all pitch classes as root.
 	for (int i=0; i<3; i++) {
 
 		int r = pcs_new[i];
@@ -32653,7 +32752,6 @@ cerr << "Quality = " << output << endl;
 
 		for (int j=0; j<3; j++) {
 			int interval = (pcs_new[j] - r + 12) % 12;
-
 			if (interval == 3) {
 				has3 = true;
 			} else if (interval == 4) {
@@ -32669,70 +32767,80 @@ cerr << "Quality = " << output << endl;
 
 		int bassint = (basspc - r + 12) % 12;
 
-		// Major
-
+		// Major triad.
 		if (has4 && has7) {
 			quality = "M";
 			root = pcnames[r];
-
 			if (bassint == 4) {
-				inversion = "b";
+				inversion = "6";
+				root += "₆";
 			} else if (bassint == 7) {
-				inversion = "c";
+				inversion = "4";
+				root += "₄";
 			}
-
 			return "";
 		}
 
-		// Minor
-
+		// Minor triad.
 		if (has3 && has7) {
 			quality = "m";
 			root = pcnames[r];
-
+			if (!root.empty()) {
+				root[0] = tolower(root[0]);
+			}
 			if (bassint == 3) {
-				inversion = "b";
+				inversion = "6";
+				root += "₆";
 			} else if (bassint == 7) {
-				inversion = "c";
+				inversion = "4";
+				root += "₄";
 			}
 
 			return "";
 		}
 
-		// Diminished
-
+		// Diminished triad.
 		if (has3 && has6) {
 			quality = "d";
 			root = pcnames[r];
-
-			if (bassint == 3) {
-				inversion = "b";
-			} else if (bassint == 6) {
-				inversion = "c";
+			root += "°";
+			if (!root.empty()) {
+				root[0] = tolower(root[0]);
 			}
-
+			if (bassint == 3) {
+				inversion = "6";
+				root += "₆";
+			} else if (bassint == 4) {
+				inversion = "4";
+				root += "₄";
+			}
 			return "";
 		}
 
-		// Augmented
-
+		// Augmented triad.
 		if (has4 && has8) {
 			quality = "A";
 			root = pcnames[r];
-
+			root += "⁺";
 			if (bassint == 4) {
-				inversion = "b";
+				inversion = "6";
+				root += "₆";
 			} else if (bassint == 8) {
-				inversion = "c";
+				inversion = "4";
+				root += "₄";
 			}
-
 			return "";
 		}
 	}
 
-	quality = "??";
+	// Unknown trichord.
+	quality = "?";
+	root.clear();
+	inversion.clear();
+
 	return "";
 }
+
 
 //////////////////////////////
 //
@@ -61160,6 +61268,7 @@ void Tool_autobeam::removeEdgeRests(HTp& startnote, HTp& endnote) {
 
 Tool_autocadence::Tool_autocadence(void) {
 	define("c|color-cadence-notes=b",    "Color cadence formula notes that match");
+	define("C|color-triad-roots=s:salmon", "Color triad analysis root analysis");
 	define("d|show-formula-index=b",     "Append formula index after CVF label");
 	define("e|even-note-spacing=b",      "Compress notation as much as possible");
 	define("ii|include-intervals=b",     "Display interval strings for notes in score (no further analysis)");
@@ -61239,6 +61348,7 @@ void Tool_autocadence::initialize(void) {
 
 	m_color                    =  getString("color");
 	m_colorQ                   =  getBoolean("color-cadence-notes");
+	m_triadColor               =  getString("color-triad-roots");
 	m_countQ                   =  getBoolean("match-count");
 	m_evenNoteSpacingQ         =  getBoolean("even-note-spacing");
 	m_intervalsOnlyQ           =  getBoolean("intervals-only");
@@ -61259,12 +61369,12 @@ void Tool_autocadence::initialize(void) {
 	m_qualityQ                 =  getBoolean("quality");
 
 	if (m_markupQ) {
-		m_lastQ = true;
-		m_rootQ = true;
+		m_lastQ    = true;
+		m_rootQ    = true;
 		m_qualityQ = true;
 	}
 	if (m_rootQ || m_qualityQ) {
-		m_triadQ = true;
+		m_triadQ   = true;
 	}
 
 	prepareCadenceDefinitions();
@@ -61329,7 +61439,7 @@ void Tool_autocadence::processFile(HumdrumFile& infile) {
 	markupScore(infile);
 	printScore(infile);
 
-	if (!m_info.str().empty()) {
+	if (m_infoQ) {
 		m_humdrum_text.str("");
 		m_humdrum_text << m_info.str();
 	}
@@ -61343,7 +61453,6 @@ void Tool_autocadence::processFile(HumdrumFile& infile) {
 //
 
 void Tool_autocadence::fillInMajorMinor(HumdrumFile& infile) {
-cerr << "FILLING MAJOR MINOR" << endl;
 
 	m_root.resize(infile.getLineCount());
 	m_quality.resize(infile.getLineCount());
@@ -61355,21 +61464,22 @@ cerr << "FILLING MAJOR MINOR" << endl;
 	options["rest"] = false;  // include rest
 	options["low"] = false;   // sort pitches from low to high
 
+
 	for (int i=0; i<infile.getLineCount(); i++) {
 		std::string value = infile[i].getTriadicQuality(infile, i,
 	 	                              m_quality[i], m_root[i], inversion[i], options);
-
-		cerr << value << "\t" << m_quality[i]  << "\t" << m_root[i] << endl;
-		if ((m_quality[i] == "M") || //major
-		   (m_quality[i] == "m") || //minor
-		   (m_quality[i] == "-5") || //open 5th
-		   (m_quality[i] == "-M") || //incomplete major
+		if (m_root[i].empty()) {
+			m_root[i] = ".";
+		}
+		if ((m_quality[i] == "m") || //minor
 		   (m_quality[i] == "-m")) { //incomplete minor
 			infile[i].setValue("auto", "quality", m_quality[i]);
 			infile[i].setValue("auto", "root", m_root[i]);
 			infile[i].setValue("auto", "inversion", inversion[i]);
 		} else if (!m_quality[i].empty()) {
 			infile[i].setValue("auto", "quality", m_quality[i]);
+			infile[i].setValue("auto", "root", m_root[i]);
+			infile[i].setValue("auto", "inversion", inversion[i]);
 		}
 	}
 }
@@ -61378,7 +61488,7 @@ cerr << "FILLING MAJOR MINOR" << endl;
 
 //////////////////////////////
 //
-// Tool_autocadence::printScore --
+// Tool_autocadence::printScore -- Print the final analysis and markup (if any).
 //
 
 void Tool_autocadence::printScore(HumdrumFile& infile) {
@@ -61391,8 +61501,42 @@ void Tool_autocadence::printScore(HumdrumFile& infile) {
 	if (!m_intervalsQ) {
 		kcount = 0;
 	}
+	bool m_hasTriadColor = false;
+
 
 	for (int i=0; i < infile.getLineCount(); i++) {
+		if (!infile[i].hasSpines()) {
+			m_humdrum_text << infile[i] << endl;
+			continue;
+		}
+		if (m_triadQ) {
+			if (infile[i].isManipulator()) {
+				HTp token = infile[i].token(0);
+				if (token->substr(0, 2) == "**") {
+					m_humdrum_text << "**cdata-triad\t";
+				} else if (*token == "*-") {
+					m_humdrum_text << "*-\t";
+				} else {
+					m_humdrum_text << "*\t";
+				}
+			} else if (infile[i].isInterpretation()) {
+				if (!m_hasTriadColor) {
+					m_humdrum_text << "*color:" << m_triadColor << "\t";
+					m_hasTriadColor = true;
+				} else {
+					m_humdrum_text << "*\t";
+				}
+			} else if (infile[i].isBarline()) {
+				m_humdrum_text << infile[i].token(0) << "\t";
+			} else if (infile[i].isCommentLocal()) {
+				m_humdrum_text << "!\t";
+			} else if (infile[i].isData()) {
+				
+			} else {
+				m_humdrum_text << "ERROR\t";
+			}
+		}
+
 		if (infile[i].isManipulator()) {
 			printIntervalManipulatorLine(infile, i, kcount);
 		} else if (infile[i].isData()) {
@@ -61403,18 +61547,20 @@ void Tool_autocadence::printScore(HumdrumFile& infile) {
 		} else if (infile[i].isCommentLocal()) {
 			printIntervalLine(infile, i, kcount, "!");
 		} else if (infile[i].isInterpretation()) {
-			printIntervalLine(infile, i, kcount, "*");
+			string tok = "*";;
+			if (!m_hasTriadColor) {
+				m_humdrum_text << "*colorB:" << m_triadColor << "\t";
+				m_hasTriadColor = true;
+			} else {
+				tok = "*\t";
+			}
+			printIntervalLine(infile, i, kcount, tok);
 		} else {
-		}
-
-		if (!infile[i].hasSpines()) {
-		} else if (infile[i].isEmpty()) {
-			m_humdrum_text << endl;
+			m_humdrum_text << "ERROR2";
 		}
 
 	}
 
-m_humdrum_text << "!! INFO " << m_infoQ << " COLOR " <<  m_color << endl;
 	if (m_colorQ) {
 		m_humdrum_text << "!!!RDF**kern: " << m_marker << " = marked note, color=" << m_color << endl;
 	}
@@ -61431,6 +61577,23 @@ m_humdrum_text << "!! INFO " << m_infoQ << " COLOR " <<  m_color << endl;
 }
 
 
+
+////////////////////////////////
+//
+// Tool_autocadence::getTriadData --
+//
+
+string Tool_autocadence::getTriadData(HumdrumFile& infile, int line) {
+	string output;
+	if (m_rootQ) {
+		if (m_root[line].empty()) {
+			output += ".";
+		} else {
+			output += m_root[line];
+		}
+	}
+	return output;
+}
 
 
 
@@ -62535,13 +62698,10 @@ void Tool_autocadence::printIntervalDataLineScore(HumdrumFile& infile,
 	if (!clabel.empty()) {
 		string slabel = sortUniqueChars(clabel);
 		string cadence = m_cadenceLabels[slabel];
-cerr << "XXX" << "\t" << slabel << "\t" << cadence << endl;
-		if (m_infoQ) {
-			m_info << "M=" << m_barnum.at(index) << "\tclabel=" << clabel << "\tslabel=" << slabel << "\tcadence=" << cadence << endl;
-			cerr << "M=" << m_barnum.at(index) << "\tclabel=" << clabel << "\tslabel=" << slabel << "\tcadence=" << cadence << endl;
-		}
+		string infolabel = cadence;
 		if (cadence.empty()) {
 			cadence = "UNKNOWN";
+			infolabel = cadence;
 		} else {
 			HumRegex hre;
 			hre.replaceDestructive(cadence, "\\n", " ", "g");
@@ -62552,9 +62712,23 @@ cerr << "XXX" << "\t" << slabel << "\t" << cadence << endl;
 		bool isPhrygian = getPhrygian(infile, index);
 		cadenceline << "!!LO:TX:a:B:rj:color=red:cadence:t=";
 		if (isPhrygian) {
-			cadenceline << "Phrygian\\n";
+			cadence   = "Phrygian\\n" + cadence;
+			infolabel = "Phrygian " + infolabel;
+		}
+		if (infolabel.find("Authentic") != string::npos) {
+			if (!m_root[index].empty()) {
+				cadence += "\\n(" + m_root[index] + ")";
+			}
+		}
+		if (infolabel.find("Vera") != string::npos) {
+			if (!m_root[index].empty()) {
+				cadence += " (" + m_root[index] + ")";
+			}
 		}
 		cadenceline << cadence;
+		if (m_infoQ) {
+			m_info << "cvf=" << slabel << "\tcadence=" << infolabel << "\\nZZZ" << "\tM=" << m_barnum.at(index) << "\tfile=" << infile.getFilename() << endl;
+		}
 	}
 
 	stringstream dissonanceline;
@@ -62629,19 +62803,35 @@ cerr << "XXX" << "\t" << slabel << "\t" << cadence << endl;
 	}
 
 	if (!cadenceline.str().empty()) {
+		if (m_triadQ) {
+			// do nothing: is global comment
+		}
 		m_humdrum_text << cadenceline.str() << endl;
 	}
 	if (!dissonanceline.str().empty()) {
+		if (m_triadQ) {
+			m_humdrum_text << "!\t";
+		}
 		m_humdrum_text << dissonanceline.str() << endl;
 	}
 	if (!labelline.str().empty()) {
+		if (m_triadQ) {
+			m_humdrum_text << "!\t";
+		}
 		m_humdrum_text << labelline.str() << endl;
 	}
 	if (lastcount > 0) {
+		if (m_triadQ) {
+			m_humdrum_text << "!\t";
+		}
 		m_humdrum_text << lastmelline.str() << endl;
 	}
 
 	if (!dataline.str().empty()) {
+		if (m_triadQ) {
+			string token = getTriadData(infile, index);
+			m_humdrum_text << token << "\t";
+		}
 		m_humdrum_text << dataline.str() << endl;
 	}
 }
@@ -63285,7 +63475,7 @@ void Tool_autocadence::prepareCadenceDefinitions(void) {
 	/*  38 */ addCadenceDefinition("C", "T",	"CT9",	R"(^(?:-?\d+|R)_1:-?\d+, 2_-2:1, 3_1:1, 3_2:-2, (?:1|8)_)");
 	/*  39 */ addCadenceDefinition("C", "T",	"CT10",	R"(^(?:-?\d+|R)_1:-?\d+, 2_-2:1, 3_2:-2, (?:1|8)_)");
 	/*  40 */ addCadenceDefinition("C", "T",	"CT11",	R"(^3_2:1, 2_-2:1, 3_2:-2, (?:1|8)_)");
-	/*  41 */ addCadenceDefinition("C", "T",	"CT11",	R"(^8_-2:1, 2_-2:1, 3_2:-2, (?:1|8)_)");
+//	/*  41 */ addCadenceDefinition("C", "T",	"CT11",	R"(^8_-2:1, 2_-2:1, 3_2:-2, (?:1|8)_)");
 	/*  42 */ addCadenceDefinition("C", "t",	"ct1",	R"(^(?:-?\d+|R)_1:-?\d+, 2_-2:1, 3_-2:1, 4D?_2:1, 3_1:1, 3_2:2, 3_)");
 	/*  43 */ addCadenceDefinition("C", "t",	"ct2",	R"(^(?:-?\d+|R)_1:-?\d+, 2_-2:1, 3_1:1, 3_-2:1, 4D?_2:1, 3_2:2, 3_)");
 	/*  44 */ addCadenceDefinition("C", "t",	"ct3",	R"(^(?:-?\d+|R)_1:-?\d+, 2_-2:1, 3_2:2, 3_)");
@@ -63411,10 +63601,11 @@ void Tool_autocadence::prepareCadenceLabels(void) {
 	m_cadenceLabels.emplace("ATyz", "Altizans");// Phrygian
 	m_cadenceLabels.emplace("ATz",  "Altizans");// Phrygian
 	m_cadenceLabels.emplace("BC",   "Authentic");
-	m_cadenceLabels.emplace("BCT",   "Authentic");
-	m_cadenceLabels.emplace("BCTu",  "Authentic");
-	m_cadenceLabels.emplace("CTb",   "Authentic");
-	m_cadenceLabels.emplace("BCt",   "Authentic");
+	m_cadenceLabels.emplace("BCT",  "Authentic");
+	m_cadenceLabels.emplace("BCTu", "Authentic");
+	m_cadenceLabels.emplace("CTb",  "Authentic");
+	m_cadenceLabels.emplace("BCt",  "Authentic");
+	m_cadenceLabels.emplace("BCt",  "Evaded Authentic");
 	m_cadenceLabels.emplace("Bc",   "Evaded Authentic");
 	m_cadenceLabels.emplace("BCu",  "Authentic");
 	m_cadenceLabels.emplace("BCuz", "Authentic");
@@ -145502,6 +145693,7 @@ Tool_triad::Tool_triad(void) {
 	define("q|quality=b",      "Display quality only");
 	define("U|no-unison=b",    "No U quality");
 	define("l|low=b",          "Sort pitches from low to high");
+	define("color=s:salmon",   "Set analysis color");
 }
 
 
@@ -145567,6 +145759,8 @@ void Tool_triad::initialize(void) {
 	m_qualityQ  = getBoolean("quality");
 	m_unisonQ   = !getBoolean("no-unison");
 	m_lowQ      = !getBoolean("low");
+	m_color     = getString("color");
+cerr << "COLOR " << m_color << endl;
 }
 
 
@@ -145580,6 +145774,7 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 	string quality;
 	string root;
 	string inversion;
+	bool hasColor = false;
 
 	for (int i=0; i<infile.getLineCount(); i++) {
 
@@ -145601,6 +145796,7 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 
 		string token = infile[i].getTriadicQuality(
 			infile, i, quality, root, inversion, options);
+		inversion = "";  // embedded in root for now.
 		if (!m_unisonQ && (quality == "U")) {
 			quality = "";
 		}
@@ -145610,6 +145806,10 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 		if (m_qualityQ) {
 			root = "";
 			inversion = "";
+		}
+		if (!hasColor && token == "*") {
+			token += "color:" + m_color;
+			hasColor = true;
 		}
 
 		// Construct analysis token for data lines.

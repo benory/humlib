@@ -49,6 +49,7 @@ class Tool_triad : public HumTool {
 		bool m_rootQ    = false; // -r
 		bool m_summaryQ = false; // not implemented
 		bool m_unisonQ  = false; // -U
+		std::string m_color = "salmon"; // --color
 
 };
 
