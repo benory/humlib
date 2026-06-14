@@ -385,9 +385,10 @@ void Tool_autocadence::initialize(void) {
 void Tool_autocadence::processFile(HumdrumFile& infile) {
 	m_info.str("");
 	m_barnum = infile.getMeasureNumbers();
+	m_root.resize(infile.getLineCount());
 
 	fillInLastMelodicInterval(infile);
-	if (m_triadQ) {
+	if (m_triadQ || m_infoQ) {
 		fillInMajorMinor(infile);
 	}
 
@@ -495,7 +496,6 @@ void Tool_autocadence::printScore(HumdrumFile& infile) {
 	}
 	bool m_hasTriadColor = false;
 
-
 	for (int i=0; i < infile.getLineCount(); i++) {
 		if (!infile[i].hasSpines()) {
 			m_humdrum_text << infile[i] << endl;
@@ -540,12 +540,12 @@ void Tool_autocadence::printScore(HumdrumFile& infile) {
 			printIntervalLine(infile, i, kcount, "!");
 		} else if (infile[i].isInterpretation()) {
 			string tok = "*";;
-			if (!m_hasTriadColor) {
-				m_humdrum_text << "*colorB:" << m_triadColor << "\t";
-				m_hasTriadColor = true;
-			} else {
-				tok = "*\t";
-			}
+//			if (!m_hasTriadColor) {
+//				m_humdrum_text << "*colorA:" << m_triadColor << "\t";
+//				m_hasTriadColor = true;
+//			} else {
+//				tok = "*\t";
+//			}
 			printIntervalLine(infile, i, kcount, tok);
 		} else {
 			m_humdrum_text << "ERROR2";
@@ -1481,7 +1481,7 @@ void Tool_autocadence::printExtractedIntervalInfo(HumdrumFile& infile) {
 		} else if (infile[i].isInterpretation()) {
 			printIntervalLine(infile, i, kcount, "*");
 		} else {
-			m_humdrum_text << "!Y!" << infile[i] << endl;
+			// m_humdrum_text << "!!YY!!" << infile[i] << endl;
 		}
 
 		if (!infile[i].hasSpines()) {
@@ -1702,6 +1702,7 @@ void Tool_autocadence::printIntervalDataLineScore(HumdrumFile& infile,
 			}
 		}
 		bool isPhrygian = getPhrygian(infile, index);
+		//if (infolabel.find("Vera") != string::npos) {
 		cadenceline << "!!LO:TX:a:B:rj:color=red:cadence:t=";
 		if (isPhrygian) {
 			cadence   = "Phrygian\\n" + cadence;
@@ -2620,6 +2621,7 @@ void Tool_autocadence::prepareCadenceLabels(void) {
 	m_cadenceLabels.emplace("CTp",  "Evaded Clausula Vera");
 	m_cadenceLabels.emplace("CTpt", "Evaded Clausula Vera");
 	m_cadenceLabels.emplace("CTu",  "Clausula Vera");
+	m_cadenceLabels.emplace("CTt",  "Clausula Vera");
 	m_cadenceLabels.emplace("Ctu",  "Evaded Authentic");
 	m_cadenceLabels.emplace("CTux", "Evaded Authentic");
 	m_cadenceLabels.emplace("CTx",  "Clausula Vera");

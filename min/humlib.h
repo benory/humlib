@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Sat Aug  8 12:24:49 PDT 2015
-// Last Modified: Sat May 23 04:24:18 JST 2026
+// Last Modified: Sat Jun 13 20:46:28 PDT 2026
 // Filename:      min/humlib.h
 // URL:           https://github.com/craigsapp/humlib/blob/master/min/humlib.h
 // Syntax:        C++11
@@ -11962,7 +11962,7 @@ class Tool_text : public HumTool {
 		std::string getParmTimestamp(HTp token, const std::string& target);
 		void     removePartText    (HTp startspine, int vth, int vsize);
 		void     removeText        (HumdrumFile& infile);
-		std::string getSyllable    (const std::string& token);
+		std::string getSyllable    (HTp token);
 		void     fillPlines        (std::vector<std::vector<HTp>>& plines, HTp tspine,
 		                            int vth, int vsize);
 		void     addSyllables      (std::vector<HTp>& syllables);
@@ -11974,6 +11974,7 @@ class Tool_text : public HumTool {
 		void        makeTextArray  (std::vector<std::vector<HTp>>& texts, std::vector<HTp> spines);
 		std::string makeStyle      (void);
 		int countSyllables         (std::vector<HTp>& tokens);
+		void markBis               (HTp spine);
 
 	private:
 		bool     m_onlyQ      = false;
@@ -11989,6 +11990,7 @@ class Tool_text : public HumTool {
 		bool     m_countQ     =  true;
 		bool     m_refrainOnlyQ = false;
 		bool     m_verseOnlyQ   = false;
+		bool     m_noBisQ       = false;
 
 		std::vector<std::vector<std::string>> m_text;
 		std::stringstream m_output;
@@ -12298,16 +12300,20 @@ class Tool_triad : public HumTool {
 		void     initialize        (void);
 
 	private:
-		bool m_appendQ  = false; // -a
-		bool m_classQ   = false; // -c
-		bool m_lowQ     = false; // -l
-		bool m_pitchesQ = false; // -p
-		bool m_qualityQ = false; // -q
-		bool m_restQ    = false; // -R
-		bool m_rootQ    = false; // -r
-		bool m_summaryQ = false; // not implemented
-		bool m_unisonQ  = false; // -U
-		std::string m_color = "salmon"; // --color
+		bool m_appendQ  = false;        // -a
+		bool m_classQ   = false;        // -c
+		bool m_lowQ     = false;        // -l
+		bool m_pitchesQ = false;        // -p
+		bool m_qualityQ = false;        // -q
+		bool m_restQ    = false;        // -R
+		bool m_rootQ    = false;        // -r
+		bool m_noInversionQ = true;     // -I
+		bool m_asciiQ   = false;        // --ascii
+		bool m_rootColorQ = true;       // --no-color
+		bool m_summaryQ = false;        // not implemented
+		bool m_unisonQ  = false;        // -U
+		std::vector<std::string>        m_pcColor; 
+		std::string m_color = "salmon"; // color of analysis text
 
 };
 

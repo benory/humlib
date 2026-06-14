@@ -35,6 +35,7 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 	bool classQ   = options["class"];
 	bool restQ    = options["rest"];
 	bool lowQ     = options["low"];
+	bool asciiQ   = options["ascii"];
 
 	quality.clear();
 	root.clear();
@@ -237,7 +238,11 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 	if (pcs_new.size() == 1) {
 		quality = "U";
 		root = pcnames[pcs_new[0]];
-		root += "₁";
+		if (asciiQ) {
+			inversion = "1";
+		} else {
+			inversion = "₁";
+		}
 		return "";
 	}
 
@@ -252,34 +257,58 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		if (interval == 7) {
 			quality = "-5";
 			root = pcnames[pc1];
-			root += "₅";
+			if (asciiQ) {
+				inversion = "5";
+			} else {
+				inversion = "₅";
+			}
 
 		} else if (interval == 5) {
 			quality = "-5";
 			root = pcnames[pc2];
-			root += "₅";
+			if (asciiQ) {
+				inversion = "5";
+			} else {
+				inversion = "₅";
+			}
 
 		} else if (interval == 3) {
 			quality = "-m";
 			root = pcnames[pc1];
 			root[0] = tolower(root[0]);
-			root += "₃";
+			if (asciiQ) {
+				inversion = "3";
+			} else {
+				inversion = "₃";
+			}
 
 		} else if (interval == 9) {
 			quality = "-m";
 			root = pcnames[pc2];
 			root[0] = tolower(root[0]);
-			root += "₃";
+			if (asciiQ) {
+				inversion = "3";
+			} else {
+				inversion = "₃";
+			}
 
 		} else if (interval == 4) {
 			quality = "-M";
 			root = pcnames[pc1];
-			root += "₃";
+			if (asciiQ) {
+				inversion = "3";
+			} else {
+				inversion = "₃";
+			}
 
 		} else if (interval == 8) {
 			quality = "-M";
 			root = pcnames[pc2];
-			root += "₃";
+			if (asciiQ) {
+				inversion = "3";
+			} else {
+				inversion = "₃";
+			}
 
 		} else {
 			quality = "?";
@@ -329,11 +358,17 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 			quality = "M";
 			root = pcnames[r];
 			if (bassint == 4) {
-				inversion = "6";
-				root += "₆";
+				if (asciiQ) {
+					inversion = "6";
+				} else {
+					inversion += "₆";
+				}
 			} else if (bassint == 7) {
-				inversion = "4";
-				root += "₄";
+				if (asciiQ) {
+					inversion = "4";
+				} else {
+					inversion = "₄";
+				}
 			}
 			return "";
 		}
@@ -346,11 +381,17 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 				root[0] = tolower(root[0]);
 			}
 			if (bassint == 3) {
-				inversion = "6";
-				root += "₆";
+				if (asciiQ) {
+					inversion = "6";
+				} else {
+					inversion = "₆";
+				}
 			} else if (bassint == 7) {
-				inversion = "4";
-				root += "₄";
+				if (asciiQ) {
+					inversion = "4";
+				} else {
+					inversion = "₄";
+				}
 			}
 
 			return "";
@@ -365,11 +406,17 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 				root[0] = tolower(root[0]);
 			}
 			if (bassint == 3) {
-				inversion = "6";
-				root += "₆";
+				if (asciiQ) {
+					inversion = "6";
+				} else {
+					inversion = "₆";
+				}
 			} else if (bassint == 4) {
-				inversion = "4";
-				root += "₄";
+				if (asciiQ) {
+					inversion = "4";
+				} else {
+					inversion = "₄";
+				}
 			}
 			return "";
 		}
@@ -380,11 +427,17 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 			root = pcnames[r];
 			root += "⁺";
 			if (bassint == 4) {
-				inversion = "6";
-				root += "₆";
+				if (asciiQ) {
+					inversion = "6";
+				} else {
+					inversion = "₆";
+				}
 			} else if (bassint == 8) {
-				inversion = "4";
-				root += "₄";
+				if (asciiQ) {
+					inversion = "4";
+				} else {
+					inversion = "₄";
+				}
 			}
 			return "";
 		}

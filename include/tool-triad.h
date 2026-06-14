@@ -40,16 +40,20 @@ class Tool_triad : public HumTool {
 		void     initialize        (void);
 
 	private:
-		bool m_appendQ  = false; // -a
-		bool m_classQ   = false; // -c
-		bool m_lowQ     = false; // -l
-		bool m_pitchesQ = false; // -p
-		bool m_qualityQ = false; // -q
-		bool m_restQ    = false; // -R
-		bool m_rootQ    = false; // -r
-		bool m_summaryQ = false; // not implemented
-		bool m_unisonQ  = false; // -U
-		std::string m_color = "salmon"; // --color
+		bool m_appendQ  = false;        // -a
+		bool m_classQ   = false;        // -c
+		bool m_lowQ     = false;        // -l
+		bool m_pitchesQ = false;        // -p
+		bool m_qualityQ = false;        // -q
+		bool m_restQ    = false;        // -R
+		bool m_rootQ    = false;        // -r
+		bool m_noInversionQ = true;     // -I
+		bool m_asciiQ   = false;        // --ascii
+		bool m_rootColorQ = true;       // --no-color
+		bool m_summaryQ = false;        // not implemented
+		bool m_unisonQ  = false;        // -U
+		std::vector<std::string>        m_pcColor; 
+		std::string m_color = "salmon"; // color of analysis text
 
 };
 

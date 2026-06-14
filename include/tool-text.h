@@ -45,7 +45,7 @@ class Tool_text : public HumTool {
 		std::string getParmTimestamp(HTp token, const std::string& target);
 		void     removePartText    (HTp startspine, int vth, int vsize);
 		void     removeText        (HumdrumFile& infile);
-		std::string getSyllable    (const std::string& token);
+		std::string getSyllable    (HTp token);
 		void     fillPlines        (std::vector<std::vector<HTp>>& plines, HTp tspine,
 		                            int vth, int vsize);
 		void     addSyllables      (std::vector<HTp>& syllables);
@@ -57,6 +57,7 @@ class Tool_text : public HumTool {
 		void        makeTextArray  (std::vector<std::vector<HTp>>& texts, std::vector<HTp> spines);
 		std::string makeStyle      (void);
 		int countSyllables         (std::vector<HTp>& tokens);
+		void markBis               (HTp spine);
 
 	private:
 		bool     m_onlyQ      = false;
@@ -72,6 +73,7 @@ class Tool_text : public HumTool {
 		bool     m_countQ     =  true;
 		bool     m_refrainOnlyQ = false;
 		bool     m_verseOnlyQ   = false;
+		bool     m_noBisQ       = false;
 
 		std::vector<std::vector<std::string>> m_text;
 		std::stringstream m_output;

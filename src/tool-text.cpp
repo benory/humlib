@@ -39,6 +39,7 @@ Tool_text::Tool_text(void) {
 	define("verse|ver|plint=b",   "Show pline only");
 	define("v|show-verse=b",      "Force display of verse/refrain labels (if output is raw)");
 	define("R|norep|repeats|no-repeats=b", "Suppress repeated plines ending in r");
+	define("B|no-bis=b",           "don't extract *bis/*Xbis");
 }
 
 
@@ -103,7 +104,7 @@ void Tool_text::initialize(void) {
 	m_removeAllQ   =  getBoolean("remove-all");
 	m_rawQ         =  getBoolean("raw");
 	m_refrainOnlyQ =  getBoolean("refrain");
-cerr << "REFRAIN " << m_refrainOnlyQ << endl;
+// cerr << "REFRAIN " << m_refrainOnlyQ << endl;
 	m_verseOnlyQ   =  getBoolean("verse");
 	m_repeatsQ     =  getBoolean("no-repeats");
 	m_countQ       = !getBoolean("no-count");
@@ -112,6 +113,7 @@ cerr << "REFRAIN " << m_refrainOnlyQ << endl;
 		m_showVerseQ = false;
 		m_showVerseQ = getBoolean("show-verse");
 	}
+	m_noBisQ         =  getBoolean("no-bis");
 }
 
 
@@ -203,6 +205,7 @@ void Tool_text::removeText(HumdrumFile& infile) {
 			}
 
 			// Extract text / plines
+			markBis(spine);
 			removePartText(spine, j, (int)part.size());
 
 			// Handle removal options
@@ -218,7 +221,45 @@ void Tool_text::removeText(HumdrumFile& infile) {
 }
 
 
-////////////////////////////
+
+//////////////////////////////
+//
+// Tool_text::markBis --
+//
+
+void Tool_text::markBis(HTp spine) {
+	HTp current = spine;
+	current = current->getNextToken();
+	HumRegex hre;
+	bool bis = false;
+	while (current) {
+		if (hre.search(current, "^\\*bis\\b")) {
+			bis = true;
+			current = current->getNextToken();
+			continue;
+		}
+		if (hre.search(current, "^\\*Xbis\\b")) {
+			bis = false;
+			current = current->getNextToken();
+			continue;
+		}
+		if (current->isInterpretation()) {
+			current = current->getNextToken();
+			continue;
+		}
+		if (!bis) {
+			current = current->getNextToken();
+			continue;
+		}
+		current->setValue("auto", "bis", 1);
+		current = current->getNextToken();
+		continue;
+	}
+}
+
+
+
+//////////////////////////////
 //
 // Tool_text::removePartText --
 //
@@ -440,6 +481,11 @@ void Tool_text::addSyllables(vector<HTp>& syllables) {
 	HTp current = syllables[0]->getNextToken();
 
 	while (current) {
+		bool bis = current->getValueInt("auto", "bis");
+		if (m_noBisQ && bis) {
+			current = current->getNextToken();
+			continue;
+		}
 		if (current->isInterpretation()) {
 			if (hre.search(current, "^\\*[pr]line:")) {
 				break;
@@ -489,6 +535,7 @@ string Tool_text::makeStyle(void) {
 !! table.pline .rp { }
 !! table.pline .sylcount { }
 !! table.pline .rs { }
+!! table.pline .bis {color: #b6c6e1; font-style: italic; }
 !! table.pline .rf {color: fuchsia; }
 !! table.pline .rp {color: purple; }
 !! table.pline .rs {font-weight: bold; }
@@ -608,8 +655,8 @@ void Tool_text::printPlineSyllables(vector<HTp>& pieces) {
 
 	// strip dashes
 	for (int i=0; i<(int)np.size(); i++) {
-		string text = *np[i];
-		if (text.empty()) {
+		HTp text = np[i];
+		if (text->empty()) {
 		} else {
 			m_output << getSyllable(text);
 		}
@@ -640,9 +687,32 @@ void Tool_text::fillPlines(vector<vector<HTp>>& plines,
 	int index = -1;
 
 	while (current) {
+		// Attach metadata to current pline
+		if (hre.search(current, "^\\*rp:")) {
+			if (index >= 0) {
+				plines[index].push_back(current);
+			}
+		}
+		else if (hre.search(current, "^\\*rf:")) {
+			if (index >= 0) {
+				plines[index].push_back(current);
+			}
+		}
+		else if (hre.search(current, "^\\*rs:")) {
+			if (index >= 0) {
+				plines[index].push_back(current);
+			}
+		}
+
+		if (m_noBisQ) {
+			bool bis = current->getValueInt("auto", "bis");
+			if (bis) {
+				current = current->getNextToken();
+				continue;
+			}
+		}
 
 		if (current->isInterpretation()) {
-
 			// Store verse metadata globally
 			if (current->compare(0, 3, "*v:") == 0) {
 				plines[0].push_back(current);
@@ -650,54 +720,26 @@ void Tool_text::fillPlines(vector<vector<HTp>>& plines,
 
 			// Start a NEW pline entry
 			else if (hre.search(current, "^\\*pline:")) {
-
 				if (m_refrainOnlyQ) {
 					current = current->getNextToken();
 					continue;
 				}
-
 				plines.push_back(vector<HTp>());
-
 				index = (int)plines.size() - 1;
-
 				plines[index].push_back(current);
 			}
 
 			// Start a NEW rline entry
 			else if (hre.search(current, "^\\*rline:")) {
-
 				if (m_verseOnlyQ) {
 					current = current->getNextToken();
 					continue;
 				}
-
 				plines.push_back(vector<HTp>());
-
 				index = (int)plines.size() - 1;
-
 				plines[index].push_back(current);
 			}
-
-			// Attach metadata to current pline
-			else if (hre.search(current, "^\\*rp:")) {
-				if (index >= 0) {
-					plines[index].push_back(current);
-				}
-			}
-
-			else if (hre.search(current, "^\\*rf:")) {
-				if (index >= 0) {
-					plines[index].push_back(current);
-				}
-			}
-
-			else if (hre.search(current, "^\\*rs:")) {
-				if (index >= 0) {
-					plines[index].push_back(current);
-				}
-			}
 		}
-
 		current = current->getNextToken();
 	}
 }
@@ -711,12 +753,12 @@ void Tool_text::fillPlines(vector<vector<HTp>>& plines,
 
 void Tool_text::printPline(vector<vector<HTp>>& p, const char* description) {
 	return;
-	for (int i=0; i<(int)p.size(); i++) {
-		for (int j=0; j<(int)p[i].size(); j++) {
-			cerr << "===(" << i <<"," << j << ") = "
-			     << p.at(i).at(j) << endl;
-		}
-	}
+//	for (int i=0; i<(int)p.size(); i++) {
+//		for (int j=0; j<(int)p[i].size(); j++) {
+//			cerr << "===(" << i <<"," << j << ") = "
+//			     << p.at(i).at(j) << endl;
+//		}
+//	}
 }
 
 
@@ -740,13 +782,21 @@ void Tool_text::processTextSpine(HTp tspine, int vth, int vsize) {
 
 	while (current) {
 		if (!current->isData()) {
+
+			if (m_noBisQ) {
+				bool bis = current->getValueInt("auto", "bis");
+				if (bis) {
+					current = current->getNextToken();
+					continue;
+				}
+			}
 			current = current->getNextToken();
 			continue;
 		} else if (current->isNull()) {
 			current = current->getNextToken();
 			continue;
 		}
-		string syllable = getSyllable(*current);
+		string syllable = getSyllable(current);
 		m_output << syllable;
 		current = current->getNextToken();
 	}
@@ -760,8 +810,9 @@ void Tool_text::processTextSpine(HTp tspine, int vth, int vsize) {
 // Tool_text::getSyllable --
 //
 
-string Tool_text::getSyllable(const string& text) {
-	string newtext = text;
+string Tool_text::getSyllable(HTp text) {
+	string newtext = *text;
+	bool bisQ = text->getValueInt("auto", "bis");
 	HumRegex hre;
 	if (m_joinQ) {
 		hre.replaceDestructive(newtext, "", "^-");
@@ -776,6 +827,9 @@ string Tool_text::getSyllable(const string& text) {
 		}
 	} else {
 		newtext += " ";
+	}
+	if (bisQ) {
+		newtext = "<span class=\"bis\">" + newtext + "</span>";
 	}
 	return newtext;
 }

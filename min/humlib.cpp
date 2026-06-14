@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Sat Aug  8 12:24:49 PDT 2015
-// Last Modified: Sat May 23 04:24:18 JST 2026
+// Last Modified: Sat Jun 13 20:46:28 PDT 2026
 // Filename:      min/humlib.cpp
 // URL:           https://github.com/craigsapp/humlib/blob/master/min/humlib.cpp
 // Syntax:        C++11
@@ -32478,6 +32478,7 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 	bool classQ   = options["class"];
 	bool restQ    = options["rest"];
 	bool lowQ     = options["low"];
+	bool asciiQ   = options["ascii"];
 
 	quality.clear();
 	root.clear();
@@ -32680,7 +32681,11 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 	if (pcs_new.size() == 1) {
 		quality = "U";
 		root = pcnames[pcs_new[0]];
-		root += "₁";
+		if (asciiQ) {
+			inversion = "1";
+		} else {
+			inversion = "₁";
+		}
 		return "";
 	}
 
@@ -32695,34 +32700,58 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		if (interval == 7) {
 			quality = "-5";
 			root = pcnames[pc1];
-			root += "₅";
+			if (asciiQ) {
+				inversion = "5";
+			} else {
+				inversion = "₅";
+			}
 
 		} else if (interval == 5) {
 			quality = "-5";
 			root = pcnames[pc2];
-			root += "₅";
+			if (asciiQ) {
+				inversion = "5";
+			} else {
+				inversion = "₅";
+			}
 
 		} else if (interval == 3) {
 			quality = "-m";
 			root = pcnames[pc1];
 			root[0] = tolower(root[0]);
-			root += "₃";
+			if (asciiQ) {
+				inversion = "3";
+			} else {
+				inversion = "₃";
+			}
 
 		} else if (interval == 9) {
 			quality = "-m";
 			root = pcnames[pc2];
 			root[0] = tolower(root[0]);
-			root += "₃";
+			if (asciiQ) {
+				inversion = "3";
+			} else {
+				inversion = "₃";
+			}
 
 		} else if (interval == 4) {
 			quality = "-M";
 			root = pcnames[pc1];
-			root += "₃";
+			if (asciiQ) {
+				inversion = "3";
+			} else {
+				inversion = "₃";
+			}
 
 		} else if (interval == 8) {
 			quality = "-M";
 			root = pcnames[pc2];
-			root += "₃";
+			if (asciiQ) {
+				inversion = "3";
+			} else {
+				inversion = "₃";
+			}
 
 		} else {
 			quality = "?";
@@ -32772,11 +32801,17 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 			quality = "M";
 			root = pcnames[r];
 			if (bassint == 4) {
-				inversion = "6";
-				root += "₆";
+				if (asciiQ) {
+					inversion = "6";
+				} else {
+					inversion += "₆";
+				}
 			} else if (bassint == 7) {
-				inversion = "4";
-				root += "₄";
+				if (asciiQ) {
+					inversion = "4";
+				} else {
+					inversion = "₄";
+				}
 			}
 			return "";
 		}
@@ -32789,11 +32824,17 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 				root[0] = tolower(root[0]);
 			}
 			if (bassint == 3) {
-				inversion = "6";
-				root += "₆";
+				if (asciiQ) {
+					inversion = "6";
+				} else {
+					inversion = "₆";
+				}
 			} else if (bassint == 7) {
-				inversion = "4";
-				root += "₄";
+				if (asciiQ) {
+					inversion = "4";
+				} else {
+					inversion = "₄";
+				}
 			}
 
 			return "";
@@ -32808,11 +32849,17 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 				root[0] = tolower(root[0]);
 			}
 			if (bassint == 3) {
-				inversion = "6";
-				root += "₆";
+				if (asciiQ) {
+					inversion = "6";
+				} else {
+					inversion = "₆";
+				}
 			} else if (bassint == 4) {
-				inversion = "4";
-				root += "₄";
+				if (asciiQ) {
+					inversion = "4";
+				} else {
+					inversion = "₄";
+				}
 			}
 			return "";
 		}
@@ -32823,11 +32870,17 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 			root = pcnames[r];
 			root += "⁺";
 			if (bassint == 4) {
-				inversion = "6";
-				root += "₆";
+				if (asciiQ) {
+					inversion = "6";
+				} else {
+					inversion = "₆";
+				}
 			} else if (bassint == 8) {
-				inversion = "4";
-				root += "₄";
+				if (asciiQ) {
+					inversion = "4";
+				} else {
+					inversion = "₄";
+				}
 			}
 			return "";
 		}
@@ -61393,9 +61446,10 @@ void Tool_autocadence::initialize(void) {
 void Tool_autocadence::processFile(HumdrumFile& infile) {
 	m_info.str("");
 	m_barnum = infile.getMeasureNumbers();
+	m_root.resize(infile.getLineCount());
 
 	fillInLastMelodicInterval(infile);
-	if (m_triadQ) {
+	if (m_triadQ || m_infoQ) {
 		fillInMajorMinor(infile);
 	}
 
@@ -61503,7 +61557,6 @@ void Tool_autocadence::printScore(HumdrumFile& infile) {
 	}
 	bool m_hasTriadColor = false;
 
-
 	for (int i=0; i < infile.getLineCount(); i++) {
 		if (!infile[i].hasSpines()) {
 			m_humdrum_text << infile[i] << endl;
@@ -61548,12 +61601,12 @@ void Tool_autocadence::printScore(HumdrumFile& infile) {
 			printIntervalLine(infile, i, kcount, "!");
 		} else if (infile[i].isInterpretation()) {
 			string tok = "*";;
-			if (!m_hasTriadColor) {
-				m_humdrum_text << "*colorB:" << m_triadColor << "\t";
-				m_hasTriadColor = true;
-			} else {
-				tok = "*\t";
-			}
+//			if (!m_hasTriadColor) {
+//				m_humdrum_text << "*colorA:" << m_triadColor << "\t";
+//				m_hasTriadColor = true;
+//			} else {
+//				tok = "*\t";
+//			}
 			printIntervalLine(infile, i, kcount, tok);
 		} else {
 			m_humdrum_text << "ERROR2";
@@ -62489,7 +62542,7 @@ void Tool_autocadence::printExtractedIntervalInfo(HumdrumFile& infile) {
 		} else if (infile[i].isInterpretation()) {
 			printIntervalLine(infile, i, kcount, "*");
 		} else {
-			m_humdrum_text << "!Y!" << infile[i] << endl;
+			// m_humdrum_text << "!!YY!!" << infile[i] << endl;
 		}
 
 		if (!infile[i].hasSpines()) {
@@ -62710,6 +62763,7 @@ void Tool_autocadence::printIntervalDataLineScore(HumdrumFile& infile,
 			}
 		}
 		bool isPhrygian = getPhrygian(infile, index);
+		//if (infolabel.find("Vera") != string::npos) {
 		cadenceline << "!!LO:TX:a:B:rj:color=red:cadence:t=";
 		if (isPhrygian) {
 			cadence   = "Phrygian\\n" + cadence;
@@ -63628,6 +63682,7 @@ void Tool_autocadence::prepareCadenceLabels(void) {
 	m_cadenceLabels.emplace("CTp",  "Evaded Clausula Vera");
 	m_cadenceLabels.emplace("CTpt", "Evaded Clausula Vera");
 	m_cadenceLabels.emplace("CTu",  "Clausula Vera");
+	m_cadenceLabels.emplace("CTt",  "Clausula Vera");
 	m_cadenceLabels.emplace("Ctu",  "Evaded Authentic");
 	m_cadenceLabels.emplace("CTux", "Evaded Authentic");
 	m_cadenceLabels.emplace("CTx",  "Clausula Vera");
@@ -140723,6 +140778,7 @@ Tool_text::Tool_text(void) {
 	define("verse|ver|plint=b",   "Show pline only");
 	define("v|show-verse=b",      "Force display of verse/refrain labels (if output is raw)");
 	define("R|norep|repeats|no-repeats=b", "Suppress repeated plines ending in r");
+	define("B|no-bis=b",           "don't extract *bis/*Xbis");
 }
 
 
@@ -140787,7 +140843,7 @@ void Tool_text::initialize(void) {
 	m_removeAllQ   =  getBoolean("remove-all");
 	m_rawQ         =  getBoolean("raw");
 	m_refrainOnlyQ =  getBoolean("refrain");
-cerr << "REFRAIN " << m_refrainOnlyQ << endl;
+// cerr << "REFRAIN " << m_refrainOnlyQ << endl;
 	m_verseOnlyQ   =  getBoolean("verse");
 	m_repeatsQ     =  getBoolean("no-repeats");
 	m_countQ       = !getBoolean("no-count");
@@ -140796,6 +140852,7 @@ cerr << "REFRAIN " << m_refrainOnlyQ << endl;
 		m_showVerseQ = false;
 		m_showVerseQ = getBoolean("show-verse");
 	}
+	m_noBisQ         =  getBoolean("no-bis");
 }
 
 
@@ -140887,6 +140944,7 @@ void Tool_text::removeText(HumdrumFile& infile) {
 			}
 
 			// Extract text / plines
+			markBis(spine);
 			removePartText(spine, j, (int)part.size());
 
 			// Handle removal options
@@ -140902,7 +140960,45 @@ void Tool_text::removeText(HumdrumFile& infile) {
 }
 
 
-////////////////////////////
+
+//////////////////////////////
+//
+// Tool_text::markBis --
+//
+
+void Tool_text::markBis(HTp spine) {
+	HTp current = spine;
+	current = current->getNextToken();
+	HumRegex hre;
+	bool bis = false;
+	while (current) {
+		if (hre.search(current, "^\\*bis\\b")) {
+			bis = true;
+			current = current->getNextToken();
+			continue;
+		}
+		if (hre.search(current, "^\\*Xbis\\b")) {
+			bis = false;
+			current = current->getNextToken();
+			continue;
+		}
+		if (current->isInterpretation()) {
+			current = current->getNextToken();
+			continue;
+		}
+		if (!bis) {
+			current = current->getNextToken();
+			continue;
+		}
+		current->setValue("auto", "bis", 1);
+		current = current->getNextToken();
+		continue;
+	}
+}
+
+
+
+//////////////////////////////
 //
 // Tool_text::removePartText --
 //
@@ -141124,6 +141220,11 @@ void Tool_text::addSyllables(vector<HTp>& syllables) {
 	HTp current = syllables[0]->getNextToken();
 
 	while (current) {
+		bool bis = current->getValueInt("auto", "bis");
+		if (m_noBisQ && bis) {
+			current = current->getNextToken();
+			continue;
+		}
 		if (current->isInterpretation()) {
 			if (hre.search(current, "^\\*[pr]line:")) {
 				break;
@@ -141173,6 +141274,7 @@ string Tool_text::makeStyle(void) {
 !! table.pline .rp { }
 !! table.pline .sylcount { }
 !! table.pline .rs { }
+!! table.pline .bis {color: #b6c6e1; font-style: italic; }
 !! table.pline .rf {color: fuchsia; }
 !! table.pline .rp {color: purple; }
 !! table.pline .rs {font-weight: bold; }
@@ -141292,8 +141394,8 @@ void Tool_text::printPlineSyllables(vector<HTp>& pieces) {
 
 	// strip dashes
 	for (int i=0; i<(int)np.size(); i++) {
-		string text = *np[i];
-		if (text.empty()) {
+		HTp text = np[i];
+		if (text->empty()) {
 		} else {
 			m_output << getSyllable(text);
 		}
@@ -141324,9 +141426,32 @@ void Tool_text::fillPlines(vector<vector<HTp>>& plines,
 	int index = -1;
 
 	while (current) {
+		// Attach metadata to current pline
+		if (hre.search(current, "^\\*rp:")) {
+			if (index >= 0) {
+				plines[index].push_back(current);
+			}
+		}
+		else if (hre.search(current, "^\\*rf:")) {
+			if (index >= 0) {
+				plines[index].push_back(current);
+			}
+		}
+		else if (hre.search(current, "^\\*rs:")) {
+			if (index >= 0) {
+				plines[index].push_back(current);
+			}
+		}
+
+		if (m_noBisQ) {
+			bool bis = current->getValueInt("auto", "bis");
+			if (bis) {
+				current = current->getNextToken();
+				continue;
+			}
+		}
 
 		if (current->isInterpretation()) {
-
 			// Store verse metadata globally
 			if (current->compare(0, 3, "*v:") == 0) {
 				plines[0].push_back(current);
@@ -141334,54 +141459,26 @@ void Tool_text::fillPlines(vector<vector<HTp>>& plines,
 
 			// Start a NEW pline entry
 			else if (hre.search(current, "^\\*pline:")) {
-
 				if (m_refrainOnlyQ) {
 					current = current->getNextToken();
 					continue;
 				}
-
 				plines.push_back(vector<HTp>());
-
 				index = (int)plines.size() - 1;
-
 				plines[index].push_back(current);
 			}
 
 			// Start a NEW rline entry
 			else if (hre.search(current, "^\\*rline:")) {
-
 				if (m_verseOnlyQ) {
 					current = current->getNextToken();
 					continue;
 				}
-
 				plines.push_back(vector<HTp>());
-
 				index = (int)plines.size() - 1;
-
 				plines[index].push_back(current);
 			}
-
-			// Attach metadata to current pline
-			else if (hre.search(current, "^\\*rp:")) {
-				if (index >= 0) {
-					plines[index].push_back(current);
-				}
-			}
-
-			else if (hre.search(current, "^\\*rf:")) {
-				if (index >= 0) {
-					plines[index].push_back(current);
-				}
-			}
-
-			else if (hre.search(current, "^\\*rs:")) {
-				if (index >= 0) {
-					plines[index].push_back(current);
-				}
-			}
 		}
-
 		current = current->getNextToken();
 	}
 }
@@ -141395,12 +141492,12 @@ void Tool_text::fillPlines(vector<vector<HTp>>& plines,
 
 void Tool_text::printPline(vector<vector<HTp>>& p, const char* description) {
 	return;
-	for (int i=0; i<(int)p.size(); i++) {
-		for (int j=0; j<(int)p[i].size(); j++) {
-			cerr << "===(" << i <<"," << j << ") = "
-			     << p.at(i).at(j) << endl;
-		}
-	}
+//	for (int i=0; i<(int)p.size(); i++) {
+//		for (int j=0; j<(int)p[i].size(); j++) {
+//			cerr << "===(" << i <<"," << j << ") = "
+//			     << p.at(i).at(j) << endl;
+//		}
+//	}
 }
 
 
@@ -141424,13 +141521,21 @@ void Tool_text::processTextSpine(HTp tspine, int vth, int vsize) {
 
 	while (current) {
 		if (!current->isData()) {
+
+			if (m_noBisQ) {
+				bool bis = current->getValueInt("auto", "bis");
+				if (bis) {
+					current = current->getNextToken();
+					continue;
+				}
+			}
 			current = current->getNextToken();
 			continue;
 		} else if (current->isNull()) {
 			current = current->getNextToken();
 			continue;
 		}
-		string syllable = getSyllable(*current);
+		string syllable = getSyllable(current);
 		m_output << syllable;
 		current = current->getNextToken();
 	}
@@ -141444,8 +141549,9 @@ void Tool_text::processTextSpine(HTp tspine, int vth, int vsize) {
 // Tool_text::getSyllable --
 //
 
-string Tool_text::getSyllable(const string& text) {
-	string newtext = text;
+string Tool_text::getSyllable(HTp text) {
+	string newtext = *text;
+	bool bisQ = text->getValueInt("auto", "bis");
 	HumRegex hre;
 	if (m_joinQ) {
 		hre.replaceDestructive(newtext, "", "^-");
@@ -141460,6 +141566,9 @@ string Tool_text::getSyllable(const string& text) {
 		}
 	} else {
 		newtext += " ";
+	}
+	if (bisQ) {
+		newtext = "<span class=\"bis\">" + newtext + "</span>";
 	}
 	return newtext;
 }
@@ -145684,16 +145793,26 @@ void Tool_tremolo::storeLastTremoloNoteInfo(HTp token) {
 //
 
 Tool_triad::Tool_triad(void) {
-	define("a|append=b",       "Add analysis at the end of the line");
-	define("c|pc|class|pitch-class=b",  "Display pitch classes");
-	define("p|pitches=b",      "Display pitches");
-	define("R|rest=b",         "Display rest rather than null token");
-	define("s|summary=b",      "Display summary table");
-	define("r|root=b",         "Display root only");
-	define("q|quality=b",      "Display quality only");
-	define("U|no-unison=b",    "No U quality");
-	define("l|low=b",          "Sort pitches from low to high");
-	define("color=s:salmon",   "Set analysis color");
+	define("A=s:darkviolet",           "Color of triads with diatonic A root");
+	define("B=s:darkorange",           "Color of triads with diatonic B root");
+	define("C=s:limegreen",            "Color of triads with diatonic C root");
+	define("D=s:royalblue",            "Color of triads with diatonic D root");
+	define("E=s:crimson",              "Color of triads with diatonic E root");
+	define("F=s:goldenrod",            "Color of triads with diatonic F root");
+	define("G=s:skyblue",              "Color of triads with diatonic G root");
+	define("a|append=b",               "Add analysis at the end of the line");
+	define("c|pc|class|pitch-class=b", "Display pitch classes");
+	define("p|pitches=b",              "Display pitches");
+	define("R|rest=b",                 "Display rest rather than null token");
+	define("s|summary=b",              "Display summary table");
+	define("r|root=b",                 "Display root only");
+	define("I|no-inversion=b",         "Do not giave inversion number");
+	define("q|quality=b",              "Display quality only");
+	define("U|no-unison=b",            "No U quality");
+	define("l|low=b",                  "Sort pitches from low to high");
+	define("ascii=b",                  "Don't use unicode interval subscripts");
+	define("no-color|root-color=b",    "Turn off Colorize by root");
+	define("analysis-color=s:salmon",  "Set analysis color");
 }
 
 
@@ -145751,16 +145870,27 @@ bool Tool_triad::run(HumdrumFile& infile) {
 //
 
 void Tool_triad::initialize(void) {
-	m_appendQ   = getBoolean("append");
-	m_summaryQ  = getBoolean("summary");
-	m_classQ    = getBoolean("pitch-class");
-	m_pitchesQ  = getBoolean("pitches");
-	m_rootQ     = getBoolean("root");
-	m_qualityQ  = getBoolean("quality");
-	m_unisonQ   = !getBoolean("no-unison");
-	m_lowQ      = !getBoolean("low");
-	m_color     = getString("color");
-cerr << "COLOR " << m_color << endl;
+	m_pcColor.resize(7);
+	m_pcColor[0] = getString("C");
+	m_pcColor[1] = getString("D");
+	m_pcColor[2] = getString("E");
+	m_pcColor[3] = getString("F");
+	m_pcColor[4] = getString("G");
+	m_pcColor[5] = getString("A");
+	m_pcColor[6] = getString("B");
+
+	m_appendQ    = getBoolean("append");
+	m_summaryQ   = getBoolean("summary");
+	m_classQ     = getBoolean("pitch-class");
+	m_pitchesQ   = getBoolean("pitches");
+	m_rootQ      = getBoolean("root");
+	m_rootQ      = true;
+	m_qualityQ   = getBoolean("quality");
+	m_unisonQ    = !getBoolean("no-unison");
+	m_lowQ       = !getBoolean("low");
+	m_asciiQ     = getBoolean("ascii");
+	m_rootColorQ = !getBoolean("no-color");
+	m_color      = getString("analysis-color");
 }
 
 
@@ -145782,6 +145912,49 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 		if (!infile[i].hasSpines()) {
 			m_humdrum_text << infile[i] << endl;
 			continue;
+		} else if (infile[i].isBarline()) {
+			HTp tok = infile[i].token(0);
+			m_humdrum_text << tok << "\t" << infile[i];
+			if (m_rootColorQ) {
+				m_humdrum_text << "\t" << tok;
+			}
+			m_humdrum_text << endl;
+			continue;
+		} else if (infile[i].isCommentLocal()) {
+			m_humdrum_text << "!" << "\t" << infile[i];
+			if (m_rootColorQ) {
+				m_humdrum_text << "\t" << "!";
+			}
+			m_humdrum_text << endl;
+			continue;
+		} else if (infile[i].isExclusive()) {
+			m_humdrum_text << "**cdata" << "\t" << infile[i];
+			if (m_rootColorQ) {
+				m_humdrum_text << "\t" << "**color";
+			}
+			m_humdrum_text << endl;
+			continue;
+		} else if (infile[i].isInterpretation()) {
+			HTp tok = infile[i].token(0);
+			if (tok->compare(0, 2, "*>") == 0) {
+				m_humdrum_text << tok << "\t" << infile[i];
+				if (m_rootColorQ) {
+					m_humdrum_text << "\t" << tok;
+				}
+				m_humdrum_text << endl;
+			continue;
+			} else {
+				m_humdrum_text << tok << "\t" << infile[i];
+				if (m_rootColorQ) {
+					m_humdrum_text << "\t" << "*";
+				}
+				m_humdrum_text << endl;
+				continue;
+			}
+		}
+		if (!infile[i].isData()) {
+			m_humdrum_text << "ERROR!" << endl;
+			continue;
 		}
 
 		quality.clear();
@@ -145793,10 +145966,11 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 		options["class"]   = m_classQ;
 		options["rest"]    = m_restQ;
 		options["low"]     = m_lowQ;
+		options["ascii"]   = m_asciiQ;
+
 
 		string token = infile[i].getTriadicQuality(
 			infile, i, quality, root, inversion, options);
-		inversion = "";  // embedded in root for now.
 		if (!m_unisonQ && (quality == "U")) {
 			quality = "";
 		}
@@ -145812,6 +145986,29 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 			hasColor = true;
 		}
 
+		HumRegex hre;
+		string letter;
+		int index;
+		string color;
+		if (hre.search(root, "([A-Ga-g])")) {
+			letter = hre.getMatch(1);
+			if (!letter.empty()) {
+				index = std::toupper(letter[0]) - 'C';
+				if (index < 0) {
+					index += 7;
+				}
+				color = m_pcColor.at(index);
+			}
+		}
+		if (color.empty()) {
+			if (token == "**cdata") {
+				color = token;
+			}
+			color = "black";
+		}
+		if (!m_noInversionQ) {
+			root += inversion;
+		}
 		// Construct analysis token for data lines.
 		if (token.empty()) {
 
@@ -145838,15 +146035,21 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 
 		// Ignore hidden comment marker.
 		if (token == "!!") {
-			m_humdrum_text << infile[i] << endl;
+			m_humdrum_text << infile[i];
+			m_humdrum_text << "\t" << color;
+			m_humdrum_text << endl;
 			continue;
 		}
 
 		// Prepend analysis spine.
 		if (m_appendQ) {
-			m_humdrum_text << infile[i] << "\t" << token << endl;
+			m_humdrum_text << infile[i] << "\t" << token;
+			m_humdrum_text << "\t" << color;
+			m_humdrum_text << endl;
 		} else {
-			m_humdrum_text << token << "\t" << infile[i] << endl;
+			m_humdrum_text << token << "\t" << infile[i];
+			m_humdrum_text << "\t" << color;
+			m_humdrum_text << endl;
 		}
 	}
 }
