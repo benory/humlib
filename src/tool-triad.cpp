@@ -42,7 +42,8 @@ Tool_triad::Tool_triad(void) {
 	define("r|root=b",                 "Display root only");
 	define("I|no-inversion=b",         "Do not giave inversion number");
 	define("q|quality=b",              "Display quality only");
-	define("U|no-unison=b",            "No U quality");
+	define("U|no-unison=b",            "No Unison quality");
+	define("P|no-partial=b",           "No Unisons/missing 3rds/missing 5ths");
 	define("l|low=b",                  "Sort pitches from low to high");
 	define("ascii=b",                  "Don't use unicode interval subscripts");
 	define("no-color|root-color=b",    "Turn off Colorize by root");
@@ -113,18 +114,21 @@ void Tool_triad::initialize(void) {
 	m_pcColor[5] = getString("A");
 	m_pcColor[6] = getString("B");
 
-	m_appendQ    = getBoolean("append");
-	m_summaryQ   = getBoolean("summary");
-	m_classQ     = getBoolean("pitch-class");
-	m_pitchesQ   = getBoolean("pitches");
-	m_rootQ      = getBoolean("root");
-	m_rootQ      = true;
-	m_qualityQ   = getBoolean("quality");
-	m_unisonQ    = !getBoolean("no-unison");
-	m_lowQ       = !getBoolean("low");
-	m_asciiQ     = getBoolean("ascii");
-	m_rootColorQ = !getBoolean("no-color");
-	m_color      = getString("analysis-color");
+	m_appendQ      = getBoolean("append");
+	m_summaryQ     = getBoolean("summary");
+	m_classQ       = getBoolean("pitch-class");
+	m_pitchesQ     = getBoolean("pitches");
+	m_restQ        = getBoolean("rest");
+	m_rootQ        = getBoolean("root");
+	m_rootQ        = true;
+	m_qualityQ     = getBoolean("quality");
+	m_unisonQ      = !getBoolean("no-unison");
+	m_lowQ         = !getBoolean("low");
+	m_asciiQ       = getBoolean("ascii");
+	m_partialQ     = !getBoolean("no-partial");
+	m_noInversionQ = getBoolean("no-inversion");
+	m_rootColorQ   = !getBoolean("no-color");
+	m_color        = getString("analysis-color");
 }
 
 
@@ -176,7 +180,14 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 					m_humdrum_text << "\t" << tok;
 				}
 				m_humdrum_text << endl;
-			continue;
+				continue;
+			} else if (*tok == "*-") {
+				m_humdrum_text << tok << "\t" << infile[i];
+				if (m_rootColorQ) {
+					m_humdrum_text << "\t" << tok;
+				}
+				m_humdrum_text << endl;
+				continue;
 			} else {
 				m_humdrum_text << tok << "\t" << infile[i];
 				if (m_rootColorQ) {
@@ -186,6 +197,7 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 				continue;
 			}
 		}
+
 		if (!infile[i].isData()) {
 			m_humdrum_text << "ERROR!" << endl;
 			continue;
@@ -201,20 +213,23 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 		options["rest"]    = m_restQ;
 		options["low"]     = m_lowQ;
 		options["ascii"]   = m_asciiQ;
-
+		options["partial"] = m_partialQ;
+		options["unison"]  = m_unisonQ;
 
 		string token = infile[i].getTriadicQuality(
 			infile, i, quality, root, inversion, options);
+
 		if (!m_unisonQ && (quality == "U")) {
-			quality = "";
+			quality.clear();
+			root.clear();
+			inversion.clear();
 		}
-		if (m_rootQ) {
-			quality = "";
-		}
+
 		if (m_qualityQ) {
-			root = "";
-			inversion = "";
+			root.clear();
+			inversion.clear();
 		}
+
 		if (!hasColor && token == "*") {
 			token += "color:" + m_color;
 			hasColor = true;
@@ -234,35 +249,37 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 				color = m_pcColor.at(index);
 			}
 		}
+
 		if (color.empty()) {
 			if (token == "**cdata") {
 				color = token;
 			}
 			color = "black";
 		}
-		if (!m_noInversionQ) {
-			root += inversion;
-		}
+
 		// Construct analysis token for data lines.
 		if (token.empty()) {
 
-			token = quality;
-
-			if (!root.empty()) {
-				if (!m_rootQ) {
-					token += "(";
-				}
-				token += root;
-
-				if (!inversion.empty()) {
+			if (m_qualityQ) {
+				token = quality;
+			} else if (m_rootQ) {
+				token = root;
+				if (!m_noInversionQ) {
 					token += inversion;
 				}
-
-				if (!m_rootQ) {
+			} else {
+				token = quality;
+				if (!root.empty()) {
+					token += "(";
+					token += root;
+					if (!m_noInversionQ) {
+						token += inversion;
+					}
 					token += ")";
 				}
 			}
 		}
+
 		if (token.empty()) {
 			token = ".";
 		}
@@ -292,5 +309,4 @@ void Tool_triad::processFile(HumdrumFile& infile) {
 
 // END_MERGE
 
-} // end namespace hum
-
+} // end namespace hum//

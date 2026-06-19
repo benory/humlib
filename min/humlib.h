@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Sat Aug  8 12:24:49 PDT 2015
-// Last Modified: Sat Jun 13 20:46:28 PDT 2026
+// Last Modified: Sun Jun 14 23:22:55 PDT 2026
 // Filename:      min/humlib.h
 // URL:           https://github.com/craigsapp/humlib/blob/master/min/humlib.h
 // Syntax:        C++11
@@ -12312,6 +12312,7 @@ class Tool_triad : public HumTool {
 		bool m_rootColorQ = true;       // --no-color
 		bool m_summaryQ = false;        // not implemented
 		bool m_unisonQ  = false;        // -U
+		bool m_partialQ  = false;       // -P
 		std::vector<std::string>        m_pcColor; 
 		std::string m_color = "salmon"; // color of analysis text
 

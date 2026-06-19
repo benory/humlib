@@ -52,6 +52,7 @@ class Tool_triad : public HumTool {
 		bool m_rootColorQ = true;       // --no-color
 		bool m_summaryQ = false;        // not implemented
 		bool m_unisonQ  = false;        // -U
+		bool m_partialQ  = false;       // -P
 		std::vector<std::string>        m_pcColor; 
 		std::string m_color = "salmon"; // color of analysis text
 

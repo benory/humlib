@@ -31,11 +31,13 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		string& quality, string& root, string& inversion,
 		map<string, bool>& options) {
 
-	bool pitchesQ = options["pitches"];
-	bool classQ   = options["class"];
-	bool restQ    = options["rest"];
-	bool lowQ     = options["low"];
-	bool asciiQ   = options["ascii"];
+	bool pitchesQ   = options["pitches"];
+	bool classQ     = options["class"];
+	bool restQ      = options["rest"];
+	bool lowQ       = options["low"];
+	bool asciiQ     = options["ascii"];
+	bool unisonQ    = options["unison"];
+	bool partialQ   = options["partial"];
 
 	quality.clear();
 	root.clear();
@@ -236,14 +238,16 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 
 	// Unison.
 	if (pcs_new.size() == 1) {
-		quality = "U";
-		root = pcnames[pcs_new[0]];
-		if (asciiQ) {
-			inversion = "1";
-		} else {
-			inversion = "₁";
+		if (unisonQ && partialQ) {
+			quality = "U";
+			root = pcnames[pcs_new[0]];
+			if (asciiQ) {
+				inversion = "1";
+			} else {
+				inversion = "₁";
+			}
+			return "";
 		}
-		return "";
 	}
 
 	// Dyads.
@@ -255,59 +259,70 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		int interval = (pc2 - pc1 + 12) % 12;
 
 		if (interval == 7) {
-			quality = "-5";
-			root = pcnames[pc1];
-			if (asciiQ) {
-				inversion = "5";
-			} else {
-				inversion = "₅";
+			if (partialQ) {
+				quality = "-5";
+				root = pcnames[pc1];
+				if (asciiQ) {
+					inversion = "5";
+				} else {
+					inversion = "₅";
+				}
 			}
-
 		} else if (interval == 5) {
-			quality = "-5";
-			root = pcnames[pc2];
-			if (asciiQ) {
-				inversion = "5";
-			} else {
-				inversion = "₅";
+			if (partialQ) {
+				quality = "-5";
+					root = pcnames[pc2];
+				if (asciiQ) {
+					inversion = "5";
+				} else {
+					inversion = "₅";
+				}
 			}
 
 		} else if (interval == 3) {
-			quality = "-m";
-			root = pcnames[pc1];
-			root[0] = tolower(root[0]);
-			if (asciiQ) {
-				inversion = "3";
-			} else {
-				inversion = "₃";
+			if (partialQ) {
+				quality = "-m";
+				root = pcnames[pc1];
+				root[0] = tolower(root[0]);
+				if (asciiQ) {
+					inversion = "3";
+				} else {
+					inversion = "₃";
+				}
 			}
 
 		} else if (interval == 9) {
-			quality = "-m";
-			root = pcnames[pc2];
-			root[0] = tolower(root[0]);
-			if (asciiQ) {
-				inversion = "3";
-			} else {
-				inversion = "₃";
+			if (partialQ) {
+				quality = "-m";
+				root = pcnames[pc2];
+				root[0] = tolower(root[0]);
+				if (asciiQ) {
+					inversion = "3";
+				} else {
+					inversion = "₃";
+				}
 			}
 
 		} else if (interval == 4) {
-			quality = "-M";
-			root = pcnames[pc1];
-			if (asciiQ) {
-				inversion = "3";
-			} else {
-				inversion = "₃";
+			if (partialQ) {
+				quality = "-M";
+				root = pcnames[pc1];
+				if (asciiQ) {
+					inversion = "3";
+				} else {
+					inversion = "₃";
+				}
 			}
 
 		} else if (interval == 8) {
-			quality = "-M";
-			root = pcnames[pc2];
-			if (asciiQ) {
-				inversion = "3";
-			} else {
-				inversion = "₃";
+			if (partialQ) {
+				quality = "-M";
+				root = pcnames[pc2];
+				if (asciiQ) {
+					inversion = "3";
+				} else {
+					inversion = "₃";
+				}
 			}
 
 		} else {
@@ -401,7 +416,11 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		if (has3 && has6) {
 			quality = "d";
 			root = pcnames[r];
-			root += "°";
+			if (asciiQ) {
+				root += "o";
+			} else {
+				root += "°";
+			}
 			if (!root.empty()) {
 				root[0] = tolower(root[0]);
 			}
@@ -411,7 +430,7 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 				} else {
 					inversion = "₆";
 				}
-			} else if (bassint == 4) {
+			} else if (bassint == 6) {
 				if (asciiQ) {
 					inversion = "4";
 				} else {
@@ -425,7 +444,11 @@ string HumdrumLine::getTriadicQuality(HumdrumFile& infile, int index,
 		if (has4 && has8) {
 			quality = "A";
 			root = pcnames[r];
-			root += "⁺";
+			if (asciiQ) {
+				root += "+";
+			} else {
+				root += "⁺";
+			}
 			if (bassint == 4) {
 				if (asciiQ) {
 					inversion = "6";
